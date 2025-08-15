@@ -31,3 +31,26 @@ async function search(q){
     setStatus("Error fetching results.");
   }
 }
+function renderCards(items){
+  resultsEl.innerHTML = items.map(item=>{
+    const poster = item.Poster && item.Poster!=="N/A" ? item.Poster : "";
+    return `
+      <article class="card" data-imdb="${item.imdbID}" tabindex="0" role="button" aria-label="Open details for ${escapeHtml(item.Title)}">
+        ${poster ? `<img class="poster" src="${poster}" alt="Poster for ${escapeHtml(item.Title)}">` : `<div class="poster" aria-label="No poster available"></div>`}
+        <div class="card-body">
+          <strong>${escapeHtml(item.Title)}</strong><br>
+          <span class="muted">${item.Year}</span>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  [...resultsEl.querySelectorAll('.card')].forEach(card=>{
+    card.addEventListener('click', ()=> openDetails(card.dataset.imdb));
+    card.addEventListener('keypress', (e)=>{ if(e.key==='Enter' || e.key===' ') openDetails(card.dataset.imdb); });
+  });
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
