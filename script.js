@@ -86,7 +86,40 @@ async function openDetails(imdbID){
     setStatus("Error loading details.");
   }
 }
-
+/* FAVOURITES */
+const FAV_KEY = "omdb_favourites_v1";
+function getFavourites(){ try{ return JSON.parse(localStorage.getItem(FAV_KEY)) || []; }catch{ return []; } }
+function saveFavourites(list){ localStorage.setItem(FAV_KEY, JSON.stringify(list)); }
+function addFavourite(item){
+  const list = getFavourites();
+  if(!list.find(x=>x.imdbID===item.imdbID)){ list.push(item); saveFavourites(list); }
+}
+function removeFavourite(id){
+  const list = getFavourites().filter(x=>x.imdbID!==id);
+  saveFavourites(list);
+  renderFavourites();
+}
+function renderFavourites(){
+  const favs = getFavourites();
+  resultsEl.innerHTML = favs.length ? favs.map(item=>{
+    const poster = item.Poster && item.Poster!=="N/A" ? item.Poster : "";
+    return `
+      <article class="card">
+        ${poster ? `<img class="poster" src="${poster}" alt="Poster for ${escapeHtml(item.Title)}">` : `<div class="poster"></div>`}
+        <div class="card-body">
+          <strong>${escapeHtml(item.Title)}</strong><br>
+          <span class="muted">${item.Year}</span><br>
+          <div style="margin-top:.5rem; display:flex; gap:.5rem">
+            <button class="primary" onclick="openDetails('${item.imdbID}')">Open</button>
+            <button class="ghost" onclick="removeFavourite('${item.imdbID}')">Remove</button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("") : `<div class="muted">No favourites yet. Search for a movie and add one.</div>`;
+  setStatus(favs.length ? `Showing ${favs.length} favourite${favs.length===1?"":"s"}.` : "");
+  detailsEl.hidden = true;
+}
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
 }
