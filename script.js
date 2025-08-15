@@ -1,4 +1,4 @@
-const API_KEY = "fd9a6a82";
+const API_KEY = "fd9a6a82"; 
 const BASE = "https://www.omdbapi.com/";
 
 const form = document.getElementById('searchForm');
@@ -6,31 +6,71 @@ const queryInput = document.getElementById('query');
 const statusEl = document.getElementById('status');
 const resultsEl = document.getElementById('results');
 const detailsEl = document.getElementById('details');
+const pager = document.getElementById('pager');
+const pageLabel = document.getElementById('pageLabel');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+const favBtn = document.getElementById('showFav');
 
-function setStatus(msg){ statusEl.textContent = msg; }
+let lastQuery = "";
+let page = 1;
+let totalPages = 1;
+let showingFavourites = false;
 
 form.addEventListener('submit', (e)=>{
   e.preventDefault();
-  const q = queryInput.value.trim();
-  if(!q) return;
-  setStatus(`Searching “${q}”...`);
+  showingFavourites = false;
+  page = 1;
+  lastQuery = queryInput.value.trim();
+  if(!lastQuery) return;
+  search(lastQuery, page);
 });
-async function search(q){
+
+favBtn.addEventListener('click', ()=>{
+  showingFavourites = !showingFavourites;
+  favBtn.setAttribute('aria-pressed', String(showingFavourites));
+  favBtn.textContent = showingFavourites ? "Back to Search" : "Favourites";
   detailsEl.hidden = true;
+  if(showingFavourites) renderFavourites();
+  else if(lastQuery) search(lastQuery, page);
+});
+
+prevBtn.addEventListener('click', ()=>{
+  if(page>1){ page--; search(lastQuery, page); }
+});
+nextBtn.addEventListener('click', ()=>{
+  if(page<totalPages){ page++; search(lastQuery, page); }
+});
+
+async function search(q, p=1){
+  setStatus(`Searching “${q}”...`);
   resultsEl.innerHTML = "";
+  detailsEl.hidden = true;
+  pager.hidden = true;
+
   try{
-    const url = `${BASE}?apikey=${API_KEY}&s=${encodeURIComponent(q)}&type=movie`;
+    const url = `${BASE}?apikey=${API_KEY}&s=${encodeURIComponent(q)}&type=movie&page=${p}`;
     const res = await fetch(url);
     const data = await res.json();
-    if(data.Response === "False"){ setStatus(data.Error || "No results."); return; }
-    // placeholder render (will be replaced next)
-    resultsEl.textContent = JSON.stringify(data.Search, null, 2);
-    setStatus(`Found ${data.totalResults} result(s) for “${q}”.`);
+
+    if(data.Response === "False"){
+      setStatus(data.Error || "No results.");
+      return;
+    }
+    const results = data.Search || [];
+    const total = Number(data.totalResults || results.length);
+    totalPages = Math.max(1, Math.ceil(total/10));
+    pageLabel.textContent = `Page ${p} of ${totalPages}`;
+    pager.hidden = totalPages<=1;
+
+    renderCards(results);
+    setStatus(`Found ${total} result${total===1?"":"s"} for “${q}”.`);
   }catch(err){
     console.error(err);
-    setStatus("Error fetching results.");
+    setStatus("Error fetching results. Check your API key and try again.");
   }
 }
+
 function renderCards(items){
   resultsEl.innerHTML = items.map(item=>{
     const poster = item.Poster && item.Poster!=="N/A" ? item.Poster : "";
@@ -45,14 +85,17 @@ function renderCards(items){
     `;
   }).join("");
 
+  // click/keyboard open
   [...resultsEl.querySelectorAll('.card')].forEach(card=>{
     card.addEventListener('click', ()=> openDetails(card.dataset.imdb));
     card.addEventListener('keypress', (e)=>{ if(e.key==='Enter' || e.key===' ') openDetails(card.dataset.imdb); });
   });
 }
+
 async function openDetails(imdbID){
   setStatus("Loading details…");
   detailsEl.hidden = true;
+
   try{
     const url = `${BASE}?apikey=${API_KEY}&i=${imdbID}&plot=full`;
     const res = await fetch(url);
@@ -74,6 +117,7 @@ async function openDetails(imdbID){
           <div><strong>Language:</strong> ${escapeHtml(m.Language||"—")}</div>
           <div style="margin-top:.5rem">${ratings}</div>
           <div style="margin-top:.75rem; display:flex; gap:.5rem">
+            <button class="primary" id="favAdd">Add to Favourites</button>
             <a class="ghost" style="padding:.7rem 1rem;border:1px solid #ddd;border-radius:10px;text-decoration:none" href="https://www.imdb.com/title/${m.imdbID}/" target="_blank" rel="noreferrer">View on IMDb</a>
           </div>
         </div>
@@ -81,18 +125,30 @@ async function openDetails(imdbID){
     `;
     detailsEl.hidden = false;
     setStatus("");
+
+    document.getElementById('favAdd').addEventListener('click', ()=>{
+      addFavourite({imdbID:m.imdbID, Title:m.Title, Year:m.Year, Poster:m.Poster});
+      setStatus(`Added “${m.Title}” to favourites.`);
+    });
+
   }catch(err){
     console.error(err);
     setStatus("Error loading details.");
   }
 }
-/* FAVOURITES */
+
+/*** FAVOURITES (localStorage) ***/
 const FAV_KEY = "omdb_favourites_v1";
-function getFavourites(){ try{ return JSON.parse(localStorage.getItem(FAV_KEY)) || []; }catch{ return []; } }
+function getFavourites(){
+  try{ return JSON.parse(localStorage.getItem(FAV_KEY)) || []; }catch{ return []; }
+}
 function saveFavourites(list){ localStorage.setItem(FAV_KEY, JSON.stringify(list)); }
 function addFavourite(item){
   const list = getFavourites();
-  if(!list.find(x=>x.imdbID===item.imdbID)){ list.push(item); saveFavourites(list); }
+  if(!list.find(x=>x.imdbID===item.imdbID)){
+    list.push(item);
+    saveFavourites(list);
+  }
 }
 function removeFavourite(id){
   const list = getFavourites().filter(x=>x.imdbID!==id);
@@ -117,9 +173,13 @@ function renderFavourites(){
       </article>
     `;
   }).join("") : `<div class="muted">No favourites yet. Search for a movie and add one.</div>`;
+  pager.hidden = true;
   setStatus(favs.length ? `Showing ${favs.length} favourite${favs.length===1?"":"s"}.` : "");
   detailsEl.hidden = true;
 }
+
+/*** utils ***/
+function setStatus(msg){ statusEl.textContent = msg; }
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
 }

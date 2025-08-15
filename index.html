@@ -1,44 +1,58 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OMDb Movie Finder </title>
-<link rel="stylesheet" href="style.css">
-<script src="script.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OMDb Movie Finder – Assignment 3</title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="description" content="Search movies with the OMDb API, view details, and save favourites." />
 </head>
 <body>
   <div class="app">
     <header>
       <h1>OMDb Movie Finder</h1>
-      <p class="sub">Search movies via the <a href="https://www.omdbapi.com/" target="_blank" rel="noreferrer">OMDb API</a>. Click a result for full details.</p>
+      <p class="sub">
+        Search movies via the
+        <a href="https://www.omdbapi.com/" target="_blank" rel="noreferrer">OMDb API</a>.
+        Click a result for full details.
+      </p>
     </header>
 
     <form id="searchForm" aria-label="Movie search">
-      <input id="query" type="text" placeholder="Search by title (e.g., Black Panther)" required>
+      <input id="query" type="text" placeholder="Search by title (e.g., Black Panther)" required />
       <button class="primary" type="submit">Search</button>
       <button id="showFav" class="ghost" type="button" aria-pressed="false">Favourites</button>
     </form>
 
     <div id="status" aria-live="polite"></div>
 
+    <!-- Search results grid -->
     <section id="results" class="grid" aria-label="Search results"></section>
+
+    <!-- Pagination controls -->
     <div id="pager" class="pagination" hidden>
-      <button id="prev" class="ghost">Prev</button>
+      <button id="prev" class="ghost" type="button">Prev</button>
       <span id="pageLabel" class="muted" style="align-self:center"></span>
-      <button id="next" class="ghost">Next</button>
+      <button id="next" class="ghost" type="button">Next</button>
     </div>
 
+    <!-- Details panel -->
     <section id="details" class="panel" hidden aria-label="Movie details"></section>
 
+    <!-- Docs panel -->
     <section class="panel" style="margin-top:1.5rem">
       <strong>Docs followed:</strong>
       <a href="https://www.omdbapi.com/" target="_blank" rel="noreferrer">OMDb API Documentation</a>
     </section>
 
-    
+    <footer>
+      <p class="muted">
+        Note: API keys in front-end demos are visible. Rotate or restrict your key after grading.
+      </p>
+      <noscript>This app requires JavaScript enabled.</noscript>
+    </footer>
   </div>
 
-
+  <script src="script.js"></script>
 </body>
 </html>
