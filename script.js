@@ -50,6 +50,42 @@ function renderCards(items){
     card.addEventListener('keypress', (e)=>{ if(e.key==='Enter' || e.key===' ') openDetails(card.dataset.imdb); });
   });
 }
+async function openDetails(imdbID){
+  setStatus("Loading details…");
+  detailsEl.hidden = true;
+  try{
+    const url = `${BASE}?apikey=${API_KEY}&i=${imdbID}&plot=full`;
+    const res = await fetch(url);
+    const m = await res.json();
+    if(m.Response === "False"){ setStatus(m.Error || "Not found."); return; }
+
+    const poster = m.Poster && m.Poster!=="N/A" ? `<img src="${m.Poster}" alt="Poster for ${escapeHtml(m.Title)}" style="width:160px;border-radius:12px;border:1px solid #eee">` : "";
+    const ratings = (m.Ratings||[]).map(r=>`<span class="badge">${r.Source}: ${r.Value}</span>`).join("");
+
+    detailsEl.innerHTML = `
+      <div class="row">
+        <div>${poster}</div>
+        <div>
+          <h2 style="margin:.25rem 0">${escapeHtml(m.Title)} <span class="muted">(${m.Year})</span></h2>
+          <div class="muted">${m.Rated} • ${m.Runtime} • ${m.Genre}</div>
+          <p style="margin:.5rem 0">${escapeHtml(m.Plot || "No plot available.")}</p>
+          <div><strong>Director:</strong> ${escapeHtml(m.Director||"—")}</div>
+          <div><strong>Actors:</strong> ${escapeHtml(m.Actors||"—")}</div>
+          <div><strong>Language:</strong> ${escapeHtml(m.Language||"—")}</div>
+          <div style="margin-top:.5rem">${ratings}</div>
+          <div style="margin-top:.75rem; display:flex; gap:.5rem">
+            <a class="ghost" style="padding:.7rem 1rem;border:1px solid #ddd;border-radius:10px;text-decoration:none" href="https://www.imdb.com/title/${m.imdbID}/" target="_blank" rel="noreferrer">View on IMDb</a>
+          </div>
+        </div>
+      </div>
+    `;
+    detailsEl.hidden = false;
+    setStatus("");
+  }catch(err){
+    console.error(err);
+    setStatus("Error loading details.");
+  }
+}
 
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
